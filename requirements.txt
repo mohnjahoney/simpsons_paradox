@@ -3,4 +3,4 @@ bqplot
 numpy
 pandas
 sklearn
-os
+#os
