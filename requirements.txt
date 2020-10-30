@@ -3,5 +3,4 @@ ipywidgets
 bqplot
 numpy
 pandas
-os
 sklearn
