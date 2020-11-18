@@ -4,4 +4,4 @@ bqplot
 numpy
 pandas
 sklearn
-#os
+IPython
