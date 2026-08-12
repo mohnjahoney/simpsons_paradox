@@ -1,0 +1,247 @@
+const fish = [
+  { color: "red", length: 1.2, height: 3.3 },
+  { color: "red", length: 2.0, height: 4.5 },
+  { color: "red", length: 2.8, height: 5.4 },
+  { color: "blue", length: 3.7, height: 1.3 },
+  { color: "blue", length: 4.6, height: 2.1 },
+  { color: "blue", length: 5.2, height: 2.8 }
+];
+
+const plotStart = 72;
+const plotEnd = 552;
+const plotSpan = plotEnd - plotStart;
+
+const challengeSettings = {
+  red: {
+    items: fish.filter((item) => item.color === "red"),
+    anchor: "y",
+    lineClass: "red-trend-line",
+    mutedColor: "blue",
+    initialAnchor: { x: 0, y: 1.2 },
+    initialFree: { x: 3.5, y: 1.8 },
+    tolerance: 0.8,
+    slopeDirection: 1,
+    success: "Nice fit. The red trend is positive: longer red fish tend to be taller."
+  },
+  blue: {
+    items: fish.filter((item) => item.color === "blue"),
+    anchor: "x",
+    lineClass: "blue-trend-line",
+    mutedColor: "red",
+    initialAnchor: { x: 1, y: 0 },
+    initialFree: { x: 5.4, y: 0.6 },
+    tolerance: 0.7,
+    slopeDirection: 1,
+    success: "Nice fit. The blue trend is positive too: longer blue fish tend to be taller."
+  },
+  combined: {
+    items: fish,
+    anchor: "axes",
+    lineClass: "combined-trend-line",
+    mutedColor: null,
+    initialAnchor: { x: 0, y: 1 },
+    initialFree: { x: 5.4, y: 4.8 },
+    tolerance: 1.45,
+    slopeDirection: -1,
+    success: "That is the reversal. Ignoring color gives a negative trend: longer fish tend to be shorter."
+  }
+};
+
+export function createFishTrendGraph({ onComplete, mode = "red" } = {}) {
+  const settings = challengeSettings[mode] ?? challengeSettings.red;
+  const tool = document.createElement("div");
+  tool.className = `fish-trend-tool trend-mode-${mode}`;
+
+  const graph = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  graph.classList.add("fish-trend-graph");
+  graph.setAttribute("viewBox", "0 0 620 620");
+  graph.setAttribute("role", "img");
+  graph.setAttribute("aria-label", `${mode} fish trend-line challenge`);
+
+  drawGrid(graph);
+  fish.forEach((item, index) => drawFish(graph, item, index, mode, settings));
+
+  const line = svgElement("line", { class: `fish-trend-line user-trend-line ${settings.lineClass}` });
+  const anchorHandle = svgElement("circle", { class: "trend-handle constrained-trend-handle", r: 13, tabindex: 0 });
+  const freeHandle = svgElement("circle", { class: "trend-handle free-trend-handle", r: 13, tabindex: 0 });
+  graph.append(line, anchorHandle, freeHandle);
+
+  const feedback = document.createElement("p");
+  feedback.className = "fish-trend-explanation";
+  feedback.setAttribute("aria-live", "polite");
+  feedback.textContent = "Place the line, then release a handle to check the fit.";
+
+  tool.append(graph, feedback);
+
+  let anchor = { ...settings.initialAnchor };
+  let free = { ...settings.initialFree };
+  let activeHandle = null;
+  let activeHandleElement = null;
+  let completed = false;
+  updateLine();
+
+  attachHandle(anchorHandle, "anchor");
+  attachHandle(freeHandle, "free");
+
+  function attachHandle(handle, kind) {
+    handle.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      activeHandle = kind;
+      activeHandleElement = handle;
+      handle.classList.add("is-dragging");
+      handle.setPointerCapture(event.pointerId);
+      window.addEventListener("pointermove", moveActiveHandle);
+      window.addEventListener("pointerup", releaseHandle);
+      window.addEventListener("pointercancel", releaseHandle);
+    });
+  }
+
+  function moveActiveHandle(event) {
+    if (!activeHandle) return;
+    const point = eventToGraphPoint(event);
+    if (activeHandle === "free") free = point;
+    else anchor = constrainToAxis(point, settings.anchor, anchor);
+    updateLine();
+  }
+
+  function releaseHandle(event) {
+    if (!activeHandle) return;
+    if (activeHandleElement.hasPointerCapture(event.pointerId)) activeHandleElement.releasePointerCapture(event.pointerId);
+    activeHandleElement.classList.remove("is-dragging");
+    window.removeEventListener("pointermove", moveActiveHandle);
+    window.removeEventListener("pointerup", releaseHandle);
+    window.removeEventListener("pointercancel", releaseHandle);
+    activeHandle = null;
+    activeHandleElement = null;
+    checkFit();
+  }
+
+  function eventToGraphPoint(event) {
+    const rect = graph.getBoundingClientRect();
+    const svgX = ((event.clientX - rect.left) / rect.width) * 620;
+    const svgY = ((event.clientY - rect.top) / rect.height) * 620;
+    return {
+      x: clamp(((svgX - plotStart) / plotSpan) * 6, 0, 6),
+      y: clamp(((plotEnd - svgY) / plotSpan) * 6, 0, 6)
+    };
+  }
+
+  function updateLine() {
+    line.setAttribute("x1", graphX(anchor.x));
+    line.setAttribute("y1", graphY(anchor.y));
+    line.setAttribute("x2", graphX(free.x));
+    line.setAttribute("y2", graphY(free.y));
+    anchorHandle.setAttribute("cx", graphX(anchor.x));
+    anchorHandle.setAttribute("cy", graphY(anchor.y));
+    freeHandle.setAttribute("cx", graphX(free.x));
+    freeHandle.setAttribute("cy", graphY(free.y));
+  }
+
+  function checkFit() {
+    const dx = free.x - anchor.x;
+    if (Math.abs(dx) < 0.2) {
+      feedback.textContent = "Make the line less vertical so it can describe how height changes with length.";
+      return;
+    }
+
+    const slope = (free.y - anchor.y) / dx;
+    const intercept = anchor.y - slope * anchor.x;
+    const directionIsCorrect = settings.slopeDirection > 0 ? slope > 0.2 : slope < -0.15;
+    const error = Math.sqrt(settings.items.reduce((sum, item) => {
+      const difference = item.height - (slope * item.length + intercept);
+      return sum + difference ** 2;
+    }, 0) / settings.items.length);
+
+    if (!directionIsCorrect) {
+      feedback.textContent = settings.slopeDirection > 0
+        ? "The line needs to rise from left to right. Try a positive slope."
+        : "The line needs to fall from left to right. Try a negative slope.";
+      return;
+    }
+
+    if (error > settings.tolerance) {
+      feedback.textContent = "The direction is right. Move the line closer to the middle of the fish.";
+      return;
+    }
+
+    feedback.textContent = settings.success;
+    feedback.classList.add("good");
+    tool.classList.add("fit-accepted");
+    if (!completed) {
+      completed = true;
+      onComplete?.();
+    }
+  }
+
+  return tool;
+}
+
+function constrainToAxis(point, axis, current) {
+  if (axis === "y") return { x: 0, y: point.y };
+  if (axis === "x") return { x: point.x, y: 0 };
+  if (current.x === 0) {
+    return current.y <= 0.35 && point.y <= 0.35 ? { x: point.x, y: 0 } : { x: 0, y: point.y };
+  }
+  return current.x <= 0.35 && point.x <= 0.35 ? { x: 0, y: point.y } : { x: point.x, y: 0 };
+}
+
+function drawGrid(graph) {
+  for (let value = 0; value <= 6; value += 1) {
+    const x = graphX(value);
+    const y = graphY(value);
+    graph.append(
+      svgElement("line", { x1: x, y1: plotStart, x2: x, y2: plotEnd, class: "trend-grid-line" }),
+      svgElement("line", { x1: plotStart, y1: y, x2: plotEnd, y2: y, class: "trend-grid-line" }),
+      svgText(value, x, 574, "trend-x-tick"),
+      svgText(value, 52, y + 4, "trend-y-tick")
+    );
+  }
+
+  graph.append(
+    svgElement("line", { x1: plotStart, y1: plotEnd, x2: plotEnd, y2: plotEnd, class: "trend-axis-line" }),
+    svgElement("line", { x1: plotStart, y1: plotStart, x2: plotStart, y2: plotEnd, class: "trend-axis-line" }),
+    svgText("length", 510, 604, "trend-axis-label"),
+    svgText("height", 18, 98, "trend-axis-label trend-y-label")
+  );
+}
+
+function drawFish(graph, item, index, mode, settings) {
+  const width = 54;
+  const height = 34;
+  const isGray = mode === "combined";
+  const isMuted = settings.mutedColor === item.color;
+  const image = svgElement("image", {
+    href: `img/fish_${item.color}${isGray ? "_gray" : ""}.png`,
+    x: graphX(item.length) - width / 2,
+    y: graphY(item.height) - height / 2,
+    width,
+    height,
+    class: `trend-fish${isGray ? " gray-fish" : ""}${isMuted ? " muted-fish" : ""}`
+  });
+  image.setAttribute("aria-label", `Fish ${index + 1}: length ${item.length}, height ${item.height}`);
+  graph.append(image);
+}
+
+function graphX(value) {
+  return plotStart + (value / 6) * plotSpan;
+}
+
+function graphY(value) {
+  return plotEnd - (value / 6) * plotSpan;
+}
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function svgElement(tagName, attributes) {
+  const element = document.createElementNS("http://www.w3.org/2000/svg", tagName);
+  Object.entries(attributes).forEach(([name, value]) => element.setAttribute(name, value));
+  return element;
+}
+
+function svgText(value, x, y, className) {
+  const text = svgElement("text", { x, y, class: className });
+  text.textContent = value;
+  return text;
+}
