@@ -371,7 +371,7 @@ function probability(stat) {
 
 function ratioLabel(stat) {
   const total = stat.effective + stat.notEffective;
-  return `${stat.effective}/${total} = ${probability(stat).toFixed(3).replace(/^0/, "")}`;
+  return `${stat.effective}/${total} = ${probability(stat).toFixed(3)}`;
 }
 
 function graphX(value, max) {

@@ -18,25 +18,65 @@ export function createBaseballStats({ onComplete, mode = "seasons" } = {}) {
   feedback.setAttribute("aria-live", "polite");
 
   if (mode === "overall") {
+    const question = createCombineQuestion(tool, feedback, onComplete);
+    feedback.textContent = "Use the counts from both seasons to make one overall batting average.";
+    tool.append(table, question, feedback);
+  } else {
     const button = document.createElement("button");
-    button.className = "primary compact-tool-button";
+    button.className = "primary compact-tool-button tool-button-placeholder";
     button.type = "button";
     button.textContent = "Reveal overall totals";
-    feedback.textContent = "First compare the two seasons, then reveal the combined totals.";
-    tool.append(table, button, feedback);
-
-    button.addEventListener("click", () => {
-      tool.classList.add("show-overall");
-      button.disabled = true;
-      feedback.textContent = "Jackie wins overall: .250 beats .220, even though Arlo won both seasons.";
-      onComplete?.();
-    });
-  } else {
+    button.disabled = true;
+    button.setAttribute("aria-hidden", "true");
     feedback.textContent = "Arlo has the higher batting average in 2018 and in 2019.";
-    tool.append(table, feedback);
+    tool.append(table, button, feedback);
   }
 
   return tool;
+}
+
+function createCombineQuestion(tool, feedback, onComplete) {
+  const question = document.createElement("section");
+  question.className = "baseball-combine-question";
+
+  const heading = document.createElement("h3");
+  heading.textContent = "You have one batting average for each season. How do you combine them?";
+
+  const choices = document.createElement("div");
+  choices.className = "choices";
+  const options = [
+    "(hits in 2018 + hits in 2019) ÷ (at-bats in 2018 + at-bats in 2019)",
+    "(hits in 2018 ÷ at-bats in 2018) + (hits in 2019 ÷ at-bats in 2019)",
+    "[(hits in 2018 ÷ at-bats in 2018) + (hits in 2019 ÷ at-bats in 2019)] ÷ 2"
+  ];
+  const buttons = options.map((option, index) => {
+    const button = document.createElement("button");
+    button.className = "choice";
+    button.type = "button";
+    button.textContent = option;
+    button.addEventListener("click", () => {
+      buttons.forEach((choice) => choice.classList.remove("incorrect"));
+
+      if (index === 0) {
+        button.classList.add("correct");
+        buttons.forEach((choice) => { choice.disabled = true; });
+        tool.classList.add("show-overall");
+        feedback.textContent = "Yes. Add all the hits and all the at-bats first. Jackie wins overall: 0.250 beats 0.220, even though Arlo won both seasons.";
+        onComplete?.();
+        return;
+      }
+
+      button.classList.add("incorrect");
+      feedback.textContent = index === 1
+        ? "Adding the two averages does not make one overall average. Add the hits and at-bats first."
+        : "A simple average gives both seasons equal weight, even though they have different numbers of at-bats.";
+    });
+    return button;
+  });
+
+  choices.append(...buttons);
+  question.append(heading, choices);
+  return question;
 }
 
 function createTableHead(showOverall) {

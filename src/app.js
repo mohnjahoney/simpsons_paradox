@@ -1,11 +1,18 @@
-import { pages, standardCelebration } from "./content/pages.js?v=20260812-5";
-import { createSceneCopy, createSceneGuidance, createSummary, createTopbar } from "./lib/layout.js?v=20260611-26";
-import { createContinuePanel, createQuestionPanel } from "./lib/quiz.js?v=20260611-19";
-import { toolRenderers } from "./tools/index.js?v=20260812-6";
+import { getPageLayout } from "./lesson-core/pageSchema.js";
+import { createSceneCopy, createSceneGuidance, createSummary, createTopbar } from "./lesson-core/layout.js";
+import { createContinuePanel, createQuestionPanel } from "./lesson-core/quiz.js";
 
-const maxAttempts = 2;
+export function createApp(root, lesson) {
+  const {
+    celebration,
+    interactiveSelector,
+    layoutFamilies,
+    pages,
+    summary,
+    toolRenderers
+  } = lesson;
+  const maxAttempts = lesson.maxAttempts ?? 2;
 
-export function createApp(root) {
   const state = {
     index: getInitialIndex(),
     selected: null,
@@ -37,16 +44,20 @@ export function createApp(root) {
     shell.className = "shell";
     const currentPage = pages[state.index];
     shell.append(createTopbar({
+      brandName: lesson.title,
       currentIndex: state.index,
       totalPages: pages.length,
       sectionLabel: currentPage?.kicker ?? "Wrap-Up",
+      collapsed: state.index > 0,
       onResetHome: resetHome,
       onResetHere: resetHere
     }));
 
     const stage = document.createElement("section");
     stage.className = "stage";
-    if (["baseballGraph", "baseballStats", "fishMeasureGraph", "fishTrendGraph", "redTrianglePuzzle", "vaccineChallenge"].includes(currentPage?.tool)) {
+    const pageLayout = getPageLayout(currentPage, layoutFamilies);
+    stage.classList.add(`stage-family-${pageLayout.family}`);
+    if (pageLayout.isCompactVisual) {
       stage.classList.add("stage-compact-visual");
     }
 
@@ -54,6 +65,7 @@ export function createApp(root) {
       stage.append(createSummary({
         pages,
         results: state.results,
+        summary,
         onRestart: restart
       }));
     } else {
@@ -67,7 +79,9 @@ export function createApp(root) {
   function createScene(page, index) {
     const wrapper = document.createElement("article");
     wrapper.className = "scene";
-    if (page.advance === "toolComplete") {
+    const pageLayout = getPageLayout(page, layoutFamilies);
+    wrapper.classList.add(`scene-family-${pageLayout.family}`);
+    if (pageLayout.isToolGated) {
       wrapper.classList.add("scene-tool-gated");
     }
 
@@ -78,7 +92,7 @@ export function createApp(root) {
 
     const continuePanel = page.advance === "continue" || page.advance === "toolComplete"
       ? createContinuePanel({
-        title: standardCelebration.readyTitle,
+        title: celebration.readyTitle,
         continueDisabled: page.advance === "toolComplete",
         navigation,
         onContinue: () => completePage(index),
@@ -94,7 +108,7 @@ export function createApp(root) {
         attempts: state.attempts,
         result: state.results[index],
         maxAttempts,
-        celebration: standardCelebration,
+        celebration,
         onSelect: (choiceIndex) => selectChoice(choiceIndex),
         onSubmit: () => submitAnswer(page, index),
         onContinue: () => setPage(index + 1),
@@ -104,7 +118,7 @@ export function createApp(root) {
         navigation
       });
 
-    const copy = createSceneCopy(page, toolRenderers, {
+    const copy = createSceneCopy(page, lesson, {
       onComplete: () => {
         state.results[index] = { answered: true, correct: true, attempts: 1 };
         if (continuePanel) continuePanel.continueButton.disabled = false;
@@ -204,9 +218,9 @@ export function createApp(root) {
   }
 
   function isInteractiveTarget(target) {
-    return target instanceof Element && Boolean(target.closest(
-      "button, input, textarea, select, [contenteditable='true'], .trend-handle, .draggable-measure-fish"
-    ));
+    if (!(target instanceof Element)) return false;
+    if (target.closest("button, input, textarea, select, [contenteditable='true']")) return true;
+    return Boolean(interactiveSelector && target.closest(interactiveSelector));
   }
 
   window.addEventListener("hashchange", () => {

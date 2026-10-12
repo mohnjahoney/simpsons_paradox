@@ -1,11 +1,17 @@
-export function createTopbar({ currentIndex, totalPages, sectionLabel, onResetHome, onResetHere }) {
+export function createTopbar({ brandName, currentIndex, totalPages, sectionLabel, collapsed = false, onResetHome, onResetHere }) {
   const topbar = document.createElement("header");
   topbar.className = "topbar";
+  if (collapsed) {
+    topbar.classList.add("topbar-collapsed");
+  }
+
+  const content = document.createElement("div");
+  content.className = "topbar-content";
 
   const brand = document.createElement("div");
   brand.className = "brand";
   const brandTitle = document.createElement("strong");
-  brandTitle.textContent = "Simpson's Paradox";
+  brandTitle.textContent = brandName;
   const brandSection = document.createElement("span");
   brandSection.textContent = sectionLabel;
   brand.append(brandTitle, brandSection);
@@ -39,7 +45,13 @@ export function createTopbar({ currentIndex, totalPages, sectionLabel, onResetHo
 
   progress.append(track, label);
   progressGroup.append(progress, resets);
-  topbar.append(brand, progressGroup);
+  content.append(brand, progressGroup);
+
+  const peek = document.createElement("div");
+  peek.className = "topbar-peek";
+  peek.setAttribute("aria-hidden", "true");
+
+  topbar.append(content, peek);
   return topbar;
 }
 
@@ -52,7 +64,7 @@ function createResetButton(label, onClick) {
   return button;
 }
 
-export function createSceneCopy(page, toolRenderers, toolContext = {}) {
+export function createSceneCopy(page, { toolRenderers = {}, visualRenderers = {} }, toolContext = {}) {
   const copy = document.createElement("div");
   copy.className = "scene-copy";
 
@@ -77,6 +89,10 @@ export function createSceneCopy(page, toolRenderers, toolContext = {}) {
   });
 
   if (body.childElementCount) copy.append(body);
+
+  if (page.visual && visualRenderers[page.visual]) {
+    copy.append(visualRenderers[page.visual]({ page, ...toolContext }));
+  }
 
   if (page.callout) {
     const callout = document.createElement("aside");
@@ -113,7 +129,7 @@ export function createSceneGuidance(page) {
   return guidance;
 }
 
-export function createSummary({ pages, results, onRestart }) {
+export function createSummary({ pages, results, summary, onRestart }) {
   const card = document.createElement("article");
   card.className = "score-card";
 
@@ -121,10 +137,10 @@ export function createSummary({ pages, results, onRestart }) {
 
   const kicker = document.createElement("div");
   kicker.className = "kicker";
-  kicker.textContent = "Wrap-Up";
+  kicker.textContent = summary.kicker;
 
   const title = document.createElement("h1");
-  title.textContent = "Your Simpson Radar is warming up";
+  title.textContent = summary.title;
 
   const score = document.createElement("div");
   score.className = "score-number";
@@ -132,7 +148,9 @@ export function createSummary({ pages, results, onRestart }) {
 
   const body = document.createElement("div");
   body.className = "body-copy";
-  body.innerHTML = "<p>Across these scenes, the recurring lesson is that grouped data can tell a different story than aggregated data. Before trusting a total, look for hidden subgroups, denominator imbalances, and relationships among the features.</p>";
+  const paragraph = document.createElement("p");
+  paragraph.textContent = summary.body;
+  body.append(paragraph);
 
   const list = document.createElement("ul");
   list.className = "scene-list";
@@ -151,7 +169,7 @@ export function createSummary({ pages, results, onRestart }) {
   const restart = document.createElement("button");
   restart.className = "secondary";
   restart.type = "button";
-  restart.textContent = "Restart";
+  restart.textContent = summary.restartLabel;
   restart.addEventListener("click", onRestart);
 
   card.append(kicker, title, score, body, list, restart);

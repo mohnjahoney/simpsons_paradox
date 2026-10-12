@@ -1,3 +1,4 @@
-import { createApp } from "./app.js?v=20260812-6";
+import { createApp } from "./app.js";
+import { simpsonsLesson } from "./lessons/simpsons/index.js";
 
-createApp(document.querySelector("#app"));
+createApp(document.querySelector("#app"), simpsonsLesson);

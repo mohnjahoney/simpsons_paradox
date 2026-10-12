@@ -1,4 +1,4 @@
-import { clamp } from "../lib/math.js";
+import { clamp } from "../math.js";
 
 export function createFishCanvas() {
   const frame = document.createElement("div");

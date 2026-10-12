@@ -36,5 +36,5 @@ export function playerTotal(player) {
 }
 
 export function formatAverage(value) {
-  return value.toFixed(3).replace(/^0/, "");
+  return value.toFixed(3);
 }

@@ -14,22 +14,22 @@ const plotSpan = plotEnd - plotStart;
 const challengeSettings = {
   red: {
     items: fish.filter((item) => item.color === "red"),
-    anchor: "y",
+    anchor: "axes",
     lineClass: "red-trend-line",
     mutedColor: "blue",
-    initialAnchor: { x: 0, y: 1.2 },
-    initialFree: { x: 3.5, y: 1.8 },
+    initialAnchor: { x: 0, y: 0 },
+    initialFree: { x: 5, y: 5 },
     tolerance: 0.8,
     slopeDirection: 1,
     success: "Nice fit. The red trend is positive: longer red fish tend to be taller."
   },
   blue: {
     items: fish.filter((item) => item.color === "blue"),
-    anchor: "x",
+    anchor: "axes",
     lineClass: "blue-trend-line",
     mutedColor: "red",
-    initialAnchor: { x: 1, y: 0 },
-    initialFree: { x: 5.4, y: 0.6 },
+    initialAnchor: { x: 0, y: 0 },
+    initialFree: { x: 5, y: 5 },
     tolerance: 0.7,
     slopeDirection: 1,
     success: "Nice fit. The blue trend is positive too: longer blue fish tend to be taller."
@@ -39,8 +39,8 @@ const challengeSettings = {
     anchor: "axes",
     lineClass: "combined-trend-line",
     mutedColor: null,
-    initialAnchor: { x: 0, y: 1 },
-    initialFree: { x: 5.4, y: 4.8 },
+    initialAnchor: { x: 0, y: 0 },
+    initialFree: { x: 5, y: 5 },
     tolerance: 1.45,
     slopeDirection: -1,
     success: "That is the reversal. Ignoring color gives a negative trend: longer fish tend to be shorter."
@@ -89,6 +89,7 @@ export function createFishTrendGraph({ onComplete, mode = "red" } = {}) {
       activeHandle = kind;
       activeHandleElement = handle;
       handle.classList.add("is-dragging");
+      tool.classList.add("is-fitting-line");
       handle.setPointerCapture(event.pointerId);
       window.addEventListener("pointermove", moveActiveHandle);
       window.addEventListener("pointerup", releaseHandle);
@@ -108,6 +109,7 @@ export function createFishTrendGraph({ onComplete, mode = "red" } = {}) {
     if (!activeHandle) return;
     if (activeHandleElement.hasPointerCapture(event.pointerId)) activeHandleElement.releasePointerCapture(event.pointerId);
     activeHandleElement.classList.remove("is-dragging");
+    tool.classList.remove("is-fitting-line");
     window.removeEventListener("pointermove", moveActiveHandle);
     window.removeEventListener("pointerup", releaseHandle);
     window.removeEventListener("pointercancel", releaseHandle);
@@ -167,6 +169,8 @@ export function createFishTrendGraph({ onComplete, mode = "red" } = {}) {
     feedback.textContent = settings.success;
     feedback.classList.add("good");
     tool.classList.add("fit-accepted");
+    anchorHandle.setAttribute("r", 10);
+    freeHandle.setAttribute("r", 10);
     if (!completed) {
       completed = true;
       onComplete?.();
@@ -179,6 +183,10 @@ export function createFishTrendGraph({ onComplete, mode = "red" } = {}) {
 function constrainToAxis(point, axis, current) {
   if (axis === "y") return { x: 0, y: point.y };
   if (axis === "x") return { x: point.x, y: 0 };
+
+  // Keep the handle on its current axis until it reaches the origin. Once it
+  // is there, a drag along the perpendicular axis carries it through (0, 0)
+  // instead of trapping it on its original axis.
   if (current.x === 0) {
     return current.y <= 0.35 && point.y <= 0.35 ? { x: point.x, y: 0 } : { x: 0, y: point.y };
   }
