@@ -1,6 +1,78 @@
+import { battingAverage, battingPlayers, formatAverage } from "./tools/baseballData.js";
+
 export const visualRenderers = {
+  battingWeights: createBattingWeights,
   trendReversal: createTrendReversal
 };
+
+function createBattingWeights() {
+  const visual = document.createElement("figure");
+  visual.className = "batting-weight-visual";
+  visual.setAttribute("aria-label", "Season blocks sized by at-bats. Jackie has 20 at-bats at .050 and 80 at-bats at .300. Arlo has 80 at-bats at .150 and 20 at-bats at .500.");
+
+  const heading = document.createElement("figcaption");
+  heading.className = "batting-weight-heading";
+  heading.textContent = "How much each season counts";
+
+  const key = document.createElement("p");
+  key.className = "batting-weight-key";
+  key.textContent = "Block width = how much the season counts";
+
+  const rows = document.createElement("div");
+  rows.className = "batting-weight-rows";
+  battingPlayers.forEach((player) => rows.append(createBattingWeightRow(player)));
+
+  visual.append(heading, key, rows);
+  return visual;
+}
+
+function createBattingWeightRow(player) {
+  const row = document.createElement("section");
+  row.className = `batting-weight-row ${player.className}-weight-row`;
+
+  const name = document.createElement("h4");
+  name.textContent = player.name;
+
+  const bar = document.createElement("div");
+  bar.className = "batting-weight-bar";
+  bar.style.gridTemplateColumns = player.seasons.map((season) => `${season.atBats}fr`).join(" ");
+
+  const strongestRate = Math.max(...player.seasons.map(battingAverage));
+  player.seasons.forEach((season) => {
+    const rate = battingAverage(season);
+    const block = document.createElement("div");
+    block.className = `batting-season-block ${player.className}-season-block`;
+    if (rate === strongestRate) block.classList.add("is-stronger-season");
+    block.setAttribute("aria-label", `${player.name}, ${season.year}: ${formatWeightRate(rate)} over ${season.atBats} at-bats`);
+
+    const year = document.createElement("span");
+    year.className = "batting-season-year";
+    year.textContent = season.year;
+
+    const average = document.createElement("strong");
+    average.className = "batting-season-rate";
+    average.textContent = formatWeightRate(rate);
+
+    const count = document.createElement("span");
+    count.className = "batting-season-count";
+    count.textContent = `${season.atBats} at-bats`;
+
+    block.append(year, average, count);
+    bar.append(block);
+  });
+
+  const strongestSeason = player.seasons.find((season) => battingAverage(season) === strongestRate);
+  const note = document.createElement("p");
+  note.className = "batting-weight-note";
+  note.textContent = `Stronger season: ${formatWeightRate(strongestRate)} across ${strongestSeason.atBats} at-bats.`;
+
+  row.append(name, bar, note);
+  return row;
+}
+
+function formatWeightRate(value) {
+  return formatAverage(value).replace(/^0/, "");
+}
 
 function createTrendReversal() {
   const equation = document.createElement("div");

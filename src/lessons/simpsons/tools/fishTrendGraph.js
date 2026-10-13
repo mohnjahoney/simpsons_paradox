@@ -43,12 +43,13 @@ const challengeSettings = {
     initialFree: { x: 5, y: 5 },
     tolerance: 1.45,
     slopeDirection: -1,
-    success: "That is the reversal. Ignoring color gives a negative trend: longer fish tend to be shorter."
+    success: "The gray line falls. Red fish occupy the shorter, taller region, while blue fish occupy the longer, shorter region. That between-group arrangement overwhelms the rise within each color."
   }
 };
 
 export function createFishTrendGraph({ onComplete, mode = "red" } = {}) {
   const settings = challengeSettings[mode] ?? challengeSettings.red;
+  const isCombined = mode === "combined";
   const tool = document.createElement("div");
   tool.className = `fish-trend-tool trend-mode-${mode}`;
 
@@ -71,7 +72,52 @@ export function createFishTrendGraph({ onComplete, mode = "red" } = {}) {
   feedback.setAttribute("aria-live", "polite");
   feedback.textContent = "Place the line, then release a handle to check the fit.";
 
-  tool.append(graph, feedback);
+  let prediction = null;
+  let predictionSummary = null;
+  let predictionButtons = [];
+
+  if (isCombined) {
+    tool.classList.add("awaiting-prediction");
+    graph.setAttribute("hidden", "");
+    feedback.hidden = true;
+    anchorHandle.setAttribute("tabindex", "-1");
+    anchorHandle.setAttribute("aria-disabled", "true");
+    freeHandle.setAttribute("tabindex", "-1");
+    freeHandle.setAttribute("aria-disabled", "true");
+
+    const predictionPanel = document.createElement("section");
+    predictionPanel.className = "fish-trend-prediction";
+
+    const predictionQuestion = document.createElement("h3");
+    predictionQuestion.textContent = "Both color-specific lines rose. When color is hidden, what will the one line do?";
+
+    const choices = document.createElement("div");
+    choices.className = "choices fish-prediction-choices";
+    predictionButtons = [
+      { value: "rise", label: "Rise" },
+      { value: "fall", label: "Fall" },
+      { value: "flat", label: "Stay roughly flat" }
+    ].map(({ value, label }) => {
+      const button = document.createElement("button");
+      button.className = "choice fish-prediction-choice";
+      button.type = "button";
+      button.dataset.prediction = value;
+      button.textContent = label;
+      button.addEventListener("click", () => lockPrediction(value, label));
+      return button;
+    });
+    choices.append(...predictionButtons);
+
+    predictionSummary = document.createElement("p");
+    predictionSummary.className = "fish-prediction-summary";
+    predictionSummary.setAttribute("aria-live", "polite");
+    predictionSummary.textContent = "Choose one answer before the combined graph is revealed.";
+
+    predictionPanel.append(predictionQuestion, choices, predictionSummary);
+    tool.append(predictionPanel, graph, feedback);
+  } else {
+    tool.append(graph, feedback);
+  }
 
   let anchor = { ...settings.initialAnchor };
   let free = { ...settings.initialFree };
@@ -85,6 +131,7 @@ export function createFishTrendGraph({ onComplete, mode = "red" } = {}) {
 
   function attachHandle(handle, kind) {
     handle.addEventListener("pointerdown", (event) => {
+      if (isCombined && !prediction) return;
       event.preventDefault();
       activeHandle = kind;
       activeHandleElement = handle;
@@ -169,12 +216,42 @@ export function createFishTrendGraph({ onComplete, mode = "red" } = {}) {
     feedback.textContent = settings.success;
     feedback.classList.add("good");
     tool.classList.add("fit-accepted");
+    if (isCombined) resolvePrediction();
     anchorHandle.setAttribute("r", 10);
     freeHandle.setAttribute("r", 10);
     if (!completed) {
       completed = true;
       onComplete?.();
     }
+  }
+
+  function lockPrediction(value, label) {
+    if (prediction) return;
+    prediction = value;
+    predictionButtons.forEach((button) => {
+      button.disabled = true;
+      button.classList.toggle("selected", button.dataset.prediction === value);
+    });
+    predictionSummary.textContent = `Your prediction: ${label}. Fit one line through all six fish to test it.`;
+    tool.classList.remove("awaiting-prediction");
+    tool.classList.add("prediction-locked");
+    graph.removeAttribute("hidden");
+    feedback.hidden = false;
+    anchorHandle.setAttribute("tabindex", "0");
+    anchorHandle.removeAttribute("aria-disabled");
+    freeHandle.setAttribute("tabindex", "0");
+    freeHandle.removeAttribute("aria-disabled");
+  }
+
+  function resolvePrediction() {
+    const selectedButton = predictionButtons.find((button) => button.dataset.prediction === prediction);
+    const predictionLabel = selectedButton?.textContent ?? prediction;
+    predictionSummary.textContent = `Your prediction: ${predictionLabel}. Result: the combined line falls.`;
+    predictionButtons.forEach((button) => {
+      const isResult = button.dataset.prediction === "fall";
+      button.classList.toggle("correct", isResult);
+      button.classList.toggle("incorrect", button === selectedButton && !isResult);
+    });
   }
 
   return tool;

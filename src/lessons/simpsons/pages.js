@@ -42,17 +42,17 @@ const rawPages = [
     id: "fish-observe",
     layoutFamily: "fish",
     kicker: "Example 1",
-    title: "Look for a pattern",
+    title: "Predict each color's trend",
     body: [
-      "Now there are more fish in the water. Let them drift for a moment and look for the broad visual pattern."
+      "Look at the red fish as one group and the blue fish as another. Imagine plotting each fish by length and height, then fitting one trend line to each color."
     ],
     tool: "floatingFishPond",
     prompt: {
-      question: "What general idea do you notice about these fish?",
+      question: "If each color gets its own trend line, what do you predict?",
       choices: [
-        "Red fish tend to be shorter and taller, while blue fish tend to be longer and narrower.",
-        "Red fish and blue fish are about the same length.",
-        "Red fish tend to be longer, while blue fish tend to be shorter."
+        "Both lines will rise from left to right.",
+        "Both lines will fall from left to right.",
+        "One line will rise and the other will fall."
       ],
       answer: 0
     }
@@ -201,9 +201,9 @@ const rawPages = [
     kicker: "Example 2",
     title: "Where the trick lives",
     body: [
-      "Arlo’s best season came in the small 20 at-bat season. Jackie’s best season came in the large 80 at-bat season.",
-      "The overall average gives more weight to the season where each player had more at-bats."
+      "An overall average weights each season by its number of at-bats. More at-bats means that season counts more toward the total."
     ],
+    visual: "battingWeights",
     prompt: {
       question: "What makes the reversal possible here?",
       choices: [

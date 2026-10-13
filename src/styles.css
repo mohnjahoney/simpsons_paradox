@@ -1060,6 +1060,42 @@ h1 {
   gap: 10px;
 }
 
+.fish-trend-prediction {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #b8c9bc;
+  border-radius: 8px;
+  background: #fbfcf8;
+  box-shadow: 0 8px 18px rgba(23, 33, 27, 0.07);
+}
+
+.fish-trend-prediction h3 {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.fish-prediction-choices {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.fish-prediction-choice {
+  min-height: 42px;
+  padding: 9px 8px;
+  text-align: center;
+}
+
+.fish-prediction-summary {
+  min-height: 24px;
+  margin: 0;
+  color: var(--accent-strong);
+  font-size: .9rem;
+  font-weight: 720;
+  line-height: 1.4;
+}
+
 .fish-trend-graph {
   display: block;
   width: min(100%, var(--fish-plot-size));
@@ -1212,6 +1248,112 @@ h1 {
   color: var(--accent-strong);
   font-weight: 720;
   line-height: 1.45;
+}
+
+.batting-weight-visual {
+  width: min(100%, 620px);
+  margin: 0;
+  padding: 18px;
+  border: 1px solid #bcc8bc;
+  border-radius: 8px;
+  background: #fbfcf8;
+  box-shadow: 0 12px 24px rgba(23, 33, 27, 0.08);
+}
+
+.batting-weight-heading {
+  color: var(--ink);
+  font-size: 1.08rem;
+  font-weight: 800;
+}
+
+.batting-weight-key {
+  margin: 3px 0 16px;
+  color: var(--muted);
+  font-size: .84rem;
+  font-weight: 680;
+}
+
+.batting-weight-rows {
+  display: grid;
+  gap: 17px;
+}
+
+.batting-weight-row {
+  display: grid;
+  grid-template-columns: 68px minmax(0, 1fr);
+  gap: 7px 11px;
+  align-items: stretch;
+}
+
+.batting-weight-row h4 {
+  align-self: center;
+  margin: 0;
+  font-size: .94rem;
+}
+
+.jackie-weight-row h4 { color: #b84950; }
+.arlo-weight-row h4 { color: #2d6fae; }
+
+.batting-weight-bar {
+  display: grid;
+  min-height: 76px;
+  overflow: hidden;
+  border: 1px solid #c8d0c6;
+  border-radius: 7px;
+}
+
+.batting-season-block {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  min-width: 0;
+  padding: 7px 5px;
+  border-right: 2px solid #fbfcf8;
+  text-align: center;
+}
+
+.batting-season-block:last-child {
+  border-right: 0;
+}
+
+.jackie-season-block {
+  background: #f6dddf;
+  color: #8e353d;
+}
+
+.arlo-season-block {
+  background: #dceaf6;
+  color: #285f92;
+}
+
+.jackie-season-block.is-stronger-season {
+  background: #d7656a;
+  color: white;
+}
+
+.arlo-season-block.is-stronger-season {
+  background: #4388c9;
+  color: white;
+}
+
+.batting-season-year,
+.batting-season-count {
+  font-size: clamp(.66rem, 1.1vw, .76rem);
+  font-weight: 720;
+  line-height: 1.2;
+}
+
+.batting-season-rate {
+  font-size: clamp(1.08rem, 2vw, 1.32rem);
+  line-height: 1.1;
+}
+
+.batting-weight-note {
+  grid-column: 2;
+  margin: 0;
+  color: #4f5d54;
+  font-size: .8rem;
+  font-weight: 700;
 }
 
 .baseball-tool {
